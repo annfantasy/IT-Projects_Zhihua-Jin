@@ -1,0 +1,88 @@
+kind: pipeline
+name: default
+
+steps:
+
+# - name: cim-mysql
+#   image: mysql:8.0
+#   environment:
+#     MYSQL_DATABASE: copdmanagedb
+#     MYSQL_ROOT_PASSWORD: copdmanagedb
+#     MYSQL_ROOT_HOST: '%'
+#   commands:
+#     - mysqld --initialize-insecure --lower_case_table_names=1 --skip-ssl --character_set_server=utf8mb4 --explicit_defaults_for_timestamp --user=root
+#   settings:
+#     repo: build.hdap.gatech.edu/cim-mysql
+#     tags:
+#       - latest
+
+- name: cim-web
+  image: plugins/docker
+  environment:
+    SPRING_PROFILES_ACTIVE: prod,swagger
+    # SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/copdmanagedb?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true
+  settings:
+    repo: build.hdap.gatech.edu/cim-web
+    context: .
+    dockerfile: web-dockerfile
+    tags:
+      - latest
+
+- name: cim-app
+  image: plugins/docker
+  settings:
+    repo: build.hdap.gatech.edu/cim-app
+    context: .
+    dockerfile: app-dockerfile
+    tags:
+      - latest
+
+# - name: cim-nginx
+#   image: plugins/docker
+#   settings:
+#     repo: build.hdap.gatech.edu/cim-nginx
+#     context: .
+#     dockerfile: nginx-dockerfile
+#     tags:
+#       - latest
+
+# Pull down the templates for deployment to HDAP K8S
+- name: get_chart_builder
+  image: docker:git
+  commands:
+    - git clone -b cs6440 https://github.gatech.edu/es130/HDAP_helm_deploy_templates.git
+
+# Set the namespace to use for deployment
+- name: copy_namespace
+  image: busybox:1.31
+  commands:
+    - userns=`awk '/namespace:/{print $2}' ./values.yaml`
+    - sed -i "s/REPLACE_WITH_NAMESPACE/$userns/g" ./HDAP_helm_deploy_templates/deploy/Dockerfile
+
+# Deploy the application to HDAP K8S
+- name: deploy_to_k8s
+  image: docker:dind
+  volumes:
+  - name: dockersock
+    path: /var/run
+  commands:
+    - sleep 10
+    - docker build -t deploytok8s  -f ./HDAP_helm_deploy_templates/deploy/Dockerfile .
+    - docker run deploytok8s
+
+services:
+  - name: docker
+    image: docker:dind
+    privileged: true
+    volumes:
+    - name: dockersock
+      path: /var/run
+
+volumes:
+- name: dockersock
+  temp: {}
+trigger:
+  branch:
+  - master
+  event:
+  - push

@@ -1,0 +1,44 @@
+# The namespace to deploy your application
+global:
+  namespace: copd-identify-manage-2
+
+# Default values for webapp.
+frontend:
+  #name is a DNS-1035 label and must consist of lower case alphanumeric characters or '-', start with an alphabetic character, and end with an alphanumeric character (e.g. 'my-name',  or 'abc-123')
+  name: cim2frontend
+  port: 80
+  replicaCount: 1
+  proxy:
+    incomingPath: /cim2app/
+    containerPath: "/" # The empty string "" means use same as incomingPath, otherwise the value in the string will replace the value of incomingPath when traffic is sent to the application in the deployed container
+  image:
+    repository: build.hdap.gatech.edu/cim-app
+    tag: latest
+    pullPolicy: Always
+
+# Default values for a backend API web service.
+backend:
+  #name is a DNS-1035 label and must consist of lower case alphanumeric characters or '-', start with an alphabetic character, and end with an alphanumeric character (e.g. 'my-name',  or 'abc-123')
+  name: cim2backend
+  port: 80
+  replicaCount: 1
+  proxy:
+    incomingPath: /cim2web/
+    containerPath: "/" # The empty string "" means use same as incomingPath, otherwise the value in the string will replace the value of incomingPath when traffic is sent to the application in the deployed container
+  image:
+    repository: build.hdap.gatech.edu/cim-web
+    tag: latest
+    pullPolicy: Always
+  env:
+    SPRING_PROFILES_ACTIVE: prod,swagger
+
+# Default values for a database.
+database:
+  #name is a DNS-1035 label and must consist of lower case alphanumeric characters or '-', start with an alphabetic character, and end with an alphanumeric character (e.g. 'my-name',  or 'abc-123')
+  name: cim2database
+  port: 5432
+  replicaCount: 1
+  image:
+    repository: postgres
+    tag: latest
+    pullPolicy: Always

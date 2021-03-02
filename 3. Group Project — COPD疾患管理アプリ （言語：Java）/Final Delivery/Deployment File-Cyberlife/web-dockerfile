@@ -1,0 +1,11 @@
+FROM maven:3.6-jdk-8 as builder
+
+RUN mkdir -p /web
+WORKDIR /web
+
+COPY ./web /web
+
+# RUN mvn clean spring-boot:run -Dspring-boot.run.profiles=prod
+RUN mvn clean package -Dspring-boot.run.profiles=prod
+
+ENTRYPOINT ["java","-Djava.security.egd=file:/dev/./urandom","-jar","/web/target/copdmanage-0.0.1-SNAPSHOT.jar"]
